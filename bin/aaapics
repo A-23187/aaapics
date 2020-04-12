@@ -35,8 +35,18 @@ temp=$(mktemp)
 trap 'rm -f $temp' EXIT
 
 code=$(curl "https://api.github.com/repos/$REPO/contents/$path" \
-    -s -X PUT -H 'Authorization: token place_your_personal_token_here' -w %{http_code} -o $temp \
-    -d "{\"message\":\"$msg\",\"content\":\"$cnt\",\"committer\":{\"name\":\"$NAME\",\"email\":\"$EMAIL\"}}")
+    -H 'Authorization: token place_your_personal_token_here' \
+    -s -X PUT -w %{http_code} -o $temp  -d @- <<_EOF_
+{
+    "message":"$msg",
+    "content":"$cnt",
+    "committer":{
+        "name":"$NAME",
+        "email":"$EMAIL"
+    }
+}
+_EOF_
+)
 if [[ $code =~ ^20.$ ]]; then
     url="https://cdn.jsdelivr.net/gh/$REPO/$path"
     echo $url
