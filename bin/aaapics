@@ -1,0 +1,48 @@
+#!/bin/bash
+
+REPO=A-23187/aaapics
+NAME=A23187
+EMAIL=a23187.1979421048@gmail.com
+
+PROGRAM=${0##*/}
+if [ $# = 0 ]; then
+    echo -e "Usage: $PROGRAM file [path] [msg]\n       $PROGRAM file - msg"
+    exit 1
+fi
+
+if ! [ -f $1 ]; then
+    echo "$PROGRAM: $1: No such file"
+    exit 1
+fi
+
+# path
+sha=$(sha1sum $1 | cut -d' ' -f1)
+ext=${1##*/}; ext=${ext/*./}
+path=${2:-$sha.$ext}
+if [[ $path =~ ^/|/$ ]]; then
+    echo "$PROGRAM: $path: Wrong path"
+    exit 1
+elif [ $path = - ]; then
+    path=$sha.$ext
+fi 
+
+# msg & cnt
+msg=${3:-"Add '$path'"}
+cnt=$(base64 $1 | tr -d '\n')
+
+# temp
+temp=$(mktemp)
+trap 'rm -f $temp' EXIT
+
+code=$(curl "https://api.github.com/repos/$REPO/contents/$path" \
+    -s -X PUT -H 'Authorization: token place_your_personal_token_here' -w %{http_code} -o $temp \
+    -d "{\"message\":\"$msg\",\"content\":\"$cnt\",\"committer\":{\"name\":\"$NAME\",\"email\":\"$EMAIL\"}}")
+if [[ $code =~ ^20.$ ]]; then
+    url="https://cdn.jsdelivr.net/gh/$REPO/$path"
+    echo $url
+    echo $url | xclip
+    exit 0
+else 
+    cat $temp
+    exit 1
+fi
